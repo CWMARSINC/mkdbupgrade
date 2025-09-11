@@ -122,7 +122,7 @@ and after:
 
 ```
 mkdbupgrade -f origin/tags/rel_3_7_4 -m 1312 -m 1433 -m 1461 -m 1465 \
--p ~/src/sql/prepen-to-upgrade.sql -a ~/src/sql/append-to-upgrade.sql
+-p ~/src/sql/prepend-to-upgrade.sql -a ~/src/sql/append-to-upgrade.sql
 ```
 
 mkdbupgrade names the upgrade scripts just like the existing Evergreen
@@ -134,7 +134,7 @@ following command would produce a file named
 
 ```
 mkdbupgrade -f origin/tags/rel_3_7_4 -m 1312 -m 1433 -m 1461 -m 1465 \
--p ~/src/sql/prepen-to-upgrade.sql -a ~/src/sql/append-to-upgrade.sql \
+-p ~/src/sql/prepend-to-upgrade.sql -a ~/src/sql/append-to-upgrade.sql \
 -P cwmars_custom_
 ```
 
