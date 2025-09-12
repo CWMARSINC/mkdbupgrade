@@ -45,13 +45,13 @@ pub fn get_current_branch () -> Result<String, Box<dyn Error>> {
     }
 }
 
-/// Verify that a branch is visible in the currentl repository
+/// Verify that a branch is visible in the current repository
 ///
 /// Uses /usr/bin/git to verify the existence of a git branch.
 /// The branch may be local or remote.
 ///
 /// Returns true if the branch exists, false if not.
-/// Return an error if the execuiton of /usr/bin/git fails.
+/// Return an error if the execution of /usr/bin/git fails.
 pub fn verify_branch(branch: &String) -> Result<bool, Box<dyn Error>>  {
     let status = match Command::new("/usr/bin/git").arg("rev-parse")
         .arg("--quiet").arg("--verify").arg(branch).stdout(Stdio::null())
@@ -80,7 +80,7 @@ pub fn get_branch_version(branch: &String) -> Option<String> {
 
 /// Get a list of Evergreen database upgrade files from a given branch
 ///
-/// This private function is undocumened, but has similar return
+/// This private function is undocumented, but has similar return
 /// values to other functions that use /usr/bin/git.
 fn get_branch_upgrades(branch: &String) -> Result<Vec<String>, Box<dyn Error>> {
     let output = Command::new("/usr/bin/git").arg("ls-tree").arg("--name-only")
@@ -105,13 +105,13 @@ fn get_branch_upgrades(branch: &String) -> Result<Vec<String>, Box<dyn Error>> {
 
 /// Get the list of ugprades needed to upgrade from "from" to "to" branches
 ///
-/// Uses the private get_branch_upgrades funtion, which uses
+/// Uses the private get_branch_upgrades function, which uses
 /// /usr/bin/git, to get the upgrades in the "from" and "to"
 /// branches.
 ///
 /// Returns a vector of Strings with the upgrades in the "to" branch
-/// that do not exist in the "from" branch on success. Returns any
-/// errors that occur on failure.
+/// that do not exist in the "from" branch on success. Returns the
+/// error on failure.
 pub fn get_upgrades(from: &String, to: &String) -> Result<Vec<String>, Box<dyn Error>> {
     let from_upgrades: Vec<String> = get_branch_upgrades(from)?;
     let to_upgrades: Vec<String> = get_branch_upgrades(to)?;
@@ -124,7 +124,7 @@ pub fn get_upgrades(from: &String, to: &String) -> Result<Vec<String>, Box<dyn E
 /// Read a file (inf) and write its entire contents to the output file
 /// handle (outf).
 ///
-/// Returns any errors that occur or an empty result on success.
+/// Returns an error on failure or an empty result on success.
 pub fn write_file(mut outf: &File, inf: &String) -> Result<(), Box<dyn Error>> {
     match read_to_string(inf) {
         Ok(lines) => match outf.write_all(lines.as_bytes()) {
@@ -141,7 +141,7 @@ pub fn write_file(mut outf: &File, inf: &String) -> Result<(), Box<dyn Error>> {
 /// Read the upgrade file (inf) and write its contents, minus the
 /// "BEGIN;" and "COMMIT;" lines, to the output file handle (outf).
 ///
-/// Returns any errors that occur or an empty Result on success.
+/// Returns an error on failure or an empty Result on success.
 pub fn write_upgrade(mut outf: &File, inf: &String) -> Result<(), Box<dyn Error>> {
     match read_to_string(inf) {
         Ok(lines) => {
@@ -168,7 +168,7 @@ pub fn write_upgrade(mut outf: &File, inf: &String) -> Result<(), Box<dyn Error>
 /// Returns any errors that occur, usually if the EDITOR variable is
 /// not set, or the editor cannot be run.
 ///
-/// Return an empty result on success.
+/// Returns an empty result on success.
 pub fn review_file(file: &String) -> Result<(), Box<dyn Error>> {
     let editor = match std::env::var("EDITOR") {
         Ok(ed) => ed,
