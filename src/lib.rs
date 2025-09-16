@@ -49,8 +49,9 @@ pub fn get_repository() -> Option<Repository> {
     }
 }
 
-/// Get the current git branch name in repository
+/// Get the current git branch in repository
 ///
+/// Returns current branch in the repository or an error
 pub fn get_current_branch(repo: &Repository) -> Result<Branch<'_>, Box<dyn Error>> {
     let head = match repo.head() {
         Ok(h) => h,
