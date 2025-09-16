@@ -17,104 +17,123 @@
  * You should have received a copy of the GNU General Public License
  * along with mkdbupgrade.  If not, see <http://www.gnu.org/licenses/>.
  */
+use git2::{Branch, BranchType, ObjectType, Repository, TreeWalkMode, TreeWalkResult};
+use regex::Regex;
+use std::env::var;
 use std::error::Error;
-use std::process::{Command, Stdio};
+use std::fmt;
 use std::fs::{File, read_to_string};
 use std::io::prelude::*;
-use regex::Regex;
+use std::path::Path;
+use std::process::Command;
 
-/// Get the current git branch name
-///
-/// Use /usr/bin/git to the get the current branch
-///
-/// Returns an error if git is not installed; git fails for any reason,
-/// or if Rust cannot convert the output from git to UTF-8.
-pub fn get_current_branch () -> Result<String, Box<dyn Error>> {
-    let output = Command::new("/usr/bin/git").arg("rev-parse")
-        .arg("--abbrev-ref").arg("HEAD").stdout(Stdio::piped())
-        .stderr(Stdio::piped()).output()?;
-    if output.status.success() {
-        let data = match String::from_utf8(output.stdout) {
-            Ok(s) => s.trim_end().to_string(),
-            Err(e) => return Err(Box::new(e)),
-        };
-        Ok(data)
-    } else {
-        let stderr = String::from_utf8(output.stderr).unwrap().trim_end().to_string();
-        Err(stderr.into())
+/// Error returned if current repository head reference is not a branch
+#[derive(Debug, Clone)]
+pub struct HeadError;
+
+impl fmt::Display for HeadError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "head is not a branch")
     }
 }
 
-/// Verify that a branch is visible in the current repository
+impl Error for HeadError {}
+
+/// Get reference to current git repository
 ///
-/// Uses /usr/bin/git to verify the existence of a git branch.
-/// The branch may be local or remote.
-///
-/// Returns true if the branch exists, false if not.
-/// Return an error if the execution of /usr/bin/git fails.
-pub fn verify_branch(branch: &String) -> Result<bool, Box<dyn Error>>  {
-    let status = match Command::new("/usr/bin/git").arg("rev-parse")
-        .arg("--quiet").arg("--verify").arg(branch).stdout(Stdio::null())
-        .status() {
-            Ok(s) => s,
-            Err(e) => return Err(Box::new(e)),
-        };
-    Ok(status.success())
+/// Returns None if current directory is not a repository
+pub fn get_repository() -> Option<Repository> {
+    match Repository::open("./") {
+        Ok(r) => Some(r),
+        Err(_) => None,
+    }
 }
+
+/// Get the current git branch name in repository
+///
+pub fn get_current_branch(repo: &Repository) -> Result<Branch<'_>, Box<dyn Error>> {
+    let head = match repo.head() {
+        Ok(h) => h,
+        Err(e) => return Err(Box::new(e)),
+    };
+    if head.is_branch() {
+        Ok(Branch::wrap(head))
+    } else {
+        Err(HeadError.into())
+    }
+}
+
+/// Find named branch in the repository
+///
+/// Searches for local and remote branches. Returns the branch object
+/// if found.
+pub fn find_branch<'a>(repo: &'a Repository, name: &String) -> Result<Branch<'a>, Box<dyn Error>> {
+    match repo.find_branch(name, BranchType::Local) {
+        Ok(b) => Ok(b),
+        Err(_) => {
+            match repo.find_branch(name, BranchType::Remote) {
+                Ok(r) => Ok(r),
+                Err(e) => Err(Box::new(e)),
+            }
+        },
+    }
+}
+
 
 /// Get the "version" from a git branch name
 ///
 /// Looks for a string like _X_Y_Z (where X, Y, an Z are 1 or two-digit
-/// numbers) in the string passed as an argument. This string is
-/// assumed to be a git branch name.
+/// numbers) in the name of the branch passed as an argument.
 ///
 /// If the pattern is matched, returns an Option with a string value
 /// of X.Y.Z. If not, None is returned.
-pub fn get_branch_version(branch: &String) -> Option<String> {
+pub fn get_branch_version(branch: &Branch) -> Option<String> {
     // Assumes a branch named like rel_X_Y_Z.
     let regex = Regex::new(r"_(\d{1,2})_(\d{1,2})_(\d{1,2})").unwrap();
+    let branch_name = match branch.name() {
+        Ok(Some(s)) => s,
+        Ok(None) => return None,
+        Err(_) => return None,
+    };
     let Some((_, [x, y, z])) =
-        regex.captures(branch).map(|caps| caps.extract()) else { return None };
+        regex.captures(branch_name).map(|caps| caps.extract()) else { return None };
     Some(format!("{}.{}.{}", x, y, z))
 }
 
 /// Get a list of Evergreen database upgrade files from a given branch
-///
-/// This private function is undocumented, but has similar return
-/// values to other functions that use /usr/bin/git.
-fn get_branch_upgrades(branch: &String) -> Result<Vec<String>, Box<dyn Error>> {
-    let output = Command::new("/usr/bin/git").arg("ls-tree").arg("--name-only")
-        .arg(branch).arg("--").arg("Open-ILS/src/sql/Pg/upgrade/")
-        .stdout(Stdio::piped()).stderr(Stdio::piped()).output()?;
-    if output.status.success() {
-        match String::from_utf8(output.stdout) {
-            Ok(input) => {
-                let mut data: Vec<String> = Vec::new();
-                for line in input.split_terminator("\n").collect::<Vec<&str>>() {
-                    data.push(String::from(line));
-                }
-                Ok(data)
-            },
-            Err(e) => return Err(Box::new(e)),
-        }
-    } else {
-        let stderr = String::from_utf8(output.stderr).unwrap().trim_end().to_string();
-        Err(stderr.into())
+fn get_branch_upgrades(repo: &Repository, branch: &Branch) -> Result<Vec<String>, Box<dyn Error>> {
+    let mut upgrades: Vec<String> = Vec::new();
+    let dirpath = "Open-ILS/src/sql/Pg/upgrade";
+    let tree = branch.get().peel_to_tree()?;
+    match tree.get_path(Path::new(dirpath)) {
+        Ok(tree_entry) => {
+            if let Some(ObjectType::Tree) = tree_entry.kind() {
+                let object = tree_entry.to_object(&repo)?;
+                let dir_tree = object.as_tree().unwrap();
+                dir_tree.walk(TreeWalkMode::PreOrder, |_, entry| {
+                    match entry.name() {
+                        Some(n) => upgrades.push(format!("{}/{}", dirpath, n)),
+                        None => (),
+                    }
+                    TreeWalkResult::Ok
+                })?;
+            }
+        },
+        Err(e) => return Err(Box::new(e)),
     }
+    Ok(upgrades)
 }
 
 /// Get the list of ugprades needed to upgrade from "from" to "to" branches
 ///
-/// Uses the private get_branch_upgrades function, which uses
-/// /usr/bin/git, to get the upgrades in the "from" and "to"
-/// branches.
+/// Uses the private get_branch_upgrades function.
 ///
 /// Returns a vector of Strings with the upgrades in the "to" branch
 /// that do not exist in the "from" branch on success. Returns the
 /// error on failure.
-pub fn get_upgrades(from: &String, to: &String) -> Result<Vec<String>, Box<dyn Error>> {
-    let from_upgrades: Vec<String> = get_branch_upgrades(from)?;
-    let to_upgrades: Vec<String> = get_branch_upgrades(to)?;
+pub fn get_upgrades(repo: &Repository, from: &Branch, to: &Branch) -> Result<Vec<String>, Box<dyn Error>> {
+    let from_upgrades: Vec<String> = get_branch_upgrades(repo, from)?;
+    let to_upgrades: Vec<String> = get_branch_upgrades(repo, to)?;
     let upgrades: Vec<String> = to_upgrades.into_iter().filter(|item| !from_upgrades.contains(item)).collect();
     Ok(upgrades)
 }
@@ -170,7 +189,7 @@ pub fn write_upgrade(mut outf: &File, inf: &String) -> Result<(), Box<dyn Error>
 ///
 /// Returns an empty result on success.
 pub fn review_file(file: &String) -> Result<(), Box<dyn Error>> {
-    let editor = match std::env::var("EDITOR") {
+    let editor = match var("EDITOR") {
         Ok(ed) => ed,
         Err(e) => return Err(Box::new(e)),
     };

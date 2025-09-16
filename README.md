@@ -21,7 +21,9 @@ mkdbupgrade is a Rust program, so it requires
 [Rust](https://www.rust-lang.org/) and
 [cargo](https://lib.rs/crates/cargo) to build it.
 
-mkdbupgrade uses the [clap](https://docs.rs/clap/latest/clap/) and
+mkdbupgrade uses the
+[git2](https://docs.rs/git2/latest/git2/index.html),
+[clap](https://docs.rs/clap/latest/clap/) and
 [regex](https://docs.rs/regex/latest/regex/) crates.  Cargo will take
 care of adding these for you.
 

@@ -67,12 +67,28 @@ fn main() {
     // Assumes we're in the Evergreen git repository with the correct
     // branch checked out. This also makes a quick test if we're in a
     // git repository.
-    let branch = match get_current_branch() {
+    let repository = match get_repository() {
+        Some(r) => r,
+        None => {
+            eprintln!("Current directory is not a git repository");
+            exit(1);
+        }
+    };
+    let to_branch = match get_current_branch(&repository) {
         Ok(b) => b,
         Err(e) => {
             eprintln!("{e}");
             exit(1);
         },
+    };
+
+    let to_branch_name = match to_branch.name() {
+        Ok(Some(s)) => s,
+        Ok(None) => "unknown branch",
+        Err(e) => {
+            eprintln!("{e}");
+            exit(1);
+        }
     };
 
     // Check for the Open-ILS subdirectory as an extra precaution.
@@ -84,26 +100,23 @@ fn main() {
 
     // The "from" or source branch is required, so let's check if it
     // exists.
-    let verified: bool = match verify_branch(&cli.from_branch) {
+    let from_branch = match find_branch(&repository, &cli.from_branch) {
         Ok(v) => v,
         Err(e) => {
-            eprintln!("Error verifying branch {}: {}", &cli.from_branch, e);
+            eprintln!("Error finding from branch {}: {}", &cli.from_branch, e);
             exit(1);
         }
     };
-    if ! verified {
-        eprintln!("Error: Branch does not exist {}", cli.from_branch);
-        exit(1);
-    }
 
     // The version of Evergreen that we're upgrading to.
     let version = match cli.version {
         Some(v) => v,
         None => {
-            match get_branch_version(&branch) {
+            match get_branch_version(&to_branch) {
                 Some(v) => v,
                 None => {
-                    eprintln!("Unable to determine version from branch: {branch}");
+                    eprintln!("Unable to determine version from branch: {}",
+                              to_branch_name);
                     eprintln!("Specify the new Evergreen version with -v [version]");
                     exit(1);
                 }
@@ -115,11 +128,11 @@ fn main() {
     let from_version = match cli.from_version {
         Some(v) => v,
         None => {
-            match get_branch_version(&cli.from_branch) {
+            match get_branch_version(&from_branch) {
                 Some(v) => v,
                 None => {
                     eprintln!("Unable to determine version from branch: {}",
-                              cli.from_branch);
+                              &cli.from_branch);
                     eprintln!("Specify the old Evergreen version with -F [version]");
                     exit(1);
                 }
@@ -143,7 +156,7 @@ fn main() {
     }
 
     // Preliminaries out of the way, get the list of new upgrades.
-    let upgrades: Vec<String> = match get_upgrades(&cli.from_branch, &branch) {
+    let upgrades: Vec<String> = match get_upgrades(&repository, &from_branch, &to_branch) {
         Ok(vec) => vec,
         Err(e) => {
             eprintln!("{e}");
