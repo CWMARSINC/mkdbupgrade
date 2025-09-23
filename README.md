@@ -108,6 +108,15 @@ transaction when added to the database upgrade script and have their
 > Experience.  You usually find out by making a database upgrade,
 > running it on a test database, and it fails.
 
+If you have previously applied some of the upgrades from the new
+branch, perhaps you back-ported a bug fix, you may skip these with the
+`-s` option.  Simply add some pattern uniquely matching the filename
+of the upgrade you wish to skip.  You may repeat this option for each
+upgrade that you wish to skip.  Skipped upgrades will not be added to
+the output database upgrade file.  If a skipped upgrade also matches a
+moved upgrade, the upgrade will be skipped, i.e. skipping upgrades
+take precedence over moving upgrades.
+
 You can add arbitrary code to run before or after the upgrade script
 proper.  This is useful if you have some cleanup to do before or after
 running the upgrade.  You might want to add new permissions to

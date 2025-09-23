@@ -41,6 +41,9 @@ pub struct Cli {
     /// Database upgrade(s) to move to after the main transaction. May be repeated to move additional upgrades.
     #[arg(short, long="move")]
     moved: Option<Vec<String>>,
+    /// Database upgrades(s) to skip. May be repeated to skip additional upgrades
+    #[arg(short, long="skip")]
+    skipped: Option<Vec<String>>,
     /// File to append to end of output upgrade script. May be repeated to add additional files.
     #[arg(short,long)]
     append_file: Option<Vec<String>>,
@@ -221,24 +224,47 @@ fn main() {
     };
     let mut moved: Vec<String> = Vec::new();
 
+    // Set up to handle upgrades that need to be skipped.
+    let skippedre: Option<Regex> = match cli.skipped {
+        Some(v) => {
+            let mut restr = String::from("(?:");
+            let mut add_pipe = false;
+            for upgrade in v {
+                if add_pipe {
+                    restr.push('|');
+                }
+                restr.push_str(&upgrade);
+                add_pipe = true;
+            }
+            restr.push(')');
+            Some(Regex::new(&restr).unwrap())
+        },
+        None => None,
+    };
+
     for file in upgrades {
-        let mut skip = false;
-        match movedre {
+        match skippedre {
             Some(ref re) => {
                 if re.is_match(&file) {
-                    moved.push(file.clone());
-                    skip = true;
+                    continue;
                 }
             },
             None => (),
         }
-        if ! skip {
-            match write_upgrade(&mut outfile, &file) {
-                Ok(_) => (),
-                Err(e) => {
-                    eprintln!("Error writing upgrade {}: {}", &file, e);
-                    exit(1);
+        match movedre {
+            Some(ref re) => {
+                if re.is_match(&file) {
+                    moved.push(file.clone());
+                    continue;
                 }
+            },
+            None => (),
+        }
+        match write_upgrade(&mut outfile, &file) {
+            Ok(_) => (),
+            Err(e) => {
+                eprintln!("Error writing upgrade {}: {}", &file, e);
+                exit(1);
             }
         }
     }
