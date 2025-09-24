@@ -154,7 +154,7 @@ fn main() {
     out_path.push(upgrade_filename);
     if out_path.exists() && ! cli.clobber {
         eprintln!("Output file {} exists, exiting", out_path.display());
-        eprintln!("You can overwrite it the the -C option");
+        eprintln!("You can overwrite it with the -C option");
         exit(1);
     }
 
