@@ -55,7 +55,7 @@ with the `-v` option.  Note that specifying the version this way allow
 you to use anything for the version, including nonnumerical strings.
 In the case where mkdbupgrade detects the version, it will be
 converted to a string with periods replacing the underscores:
-"3.15.14" with the above example.
+"3.15.4" with the above example.
 
 The only option that is absolutely required is `-f` to specify the
 branch from which you are making the upgrade script.  For example,
@@ -150,10 +150,10 @@ mkdbupgrade -f origin/tags/rel_3_7_4 -m 1312 -m 1433 -m 1461 -m 1465 \
 ```
 
 mkdbupgrade writes its output file in the
-`Open-ILS/src/sql/Pg/upgrade` directory of your Evergreen repository
-by default.  You may change the destination directory with the `-O`
-option, for example `-O ~/src/sql` would put the above output file in
-`~/src/sql/cwmars_custom_3.7.4-3.15.4-upgrade-db.sql`.
+`Open-ILS/src/sql/Pg/verison-upgrade` directory of your Evergreen
+repository by default.  You may change the destination directory with
+the `-O` option, for example `-O ~/src/sql` would put the above output
+file in `~/src/sql/cwmars_custom_3.7.4-3.15.4-upgrade-db.sql`.
 
 mkdbupgrade will not overwrite an existing upgrade script unless you
 specify the `-C` option.  This is a flag that takes no argument and
