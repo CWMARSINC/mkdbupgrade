@@ -201,7 +201,12 @@ pub fn review_file(file: &String) -> Result<(), Box<dyn Error>> {
     }
     cmd.arg(file);
     match cmd.spawn() {
-        Ok(_) => Ok(()),
+        Ok(mut child) => {
+            match child.wait() {
+                Ok(_) => Ok(()),
+                Err(e) => Err(Box::new(e)),
+            }
+        },
         Err(e) => Err(Box::new(e)),
     }
 }
