@@ -150,7 +150,7 @@ mkdbupgrade -f origin/tags/rel_3_7_4 -m 1312 -m 1433 -m 1461 -m 1465 \
 ```
 
 mkdbupgrade writes its output file in the
-`Open-ILS/src/sql/Pg/verison-upgrade` directory of your Evergreen
+`Open-ILS/src/sql/Pg/version-upgrade` directory of your Evergreen
 repository by default.  You may change the destination directory with
 the `-O` option, for example `-O ~/src/sql` would put the above output
 file in `~/src/sql/cwmars_custom_3.7.4-3.15.4-upgrade-db.sql`.
