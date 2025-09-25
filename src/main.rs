@@ -47,7 +47,7 @@ pub struct Cli {
     /// File to append to end of output upgrade script. May be repeated to add additional files.
     #[arg(short,long)]
     append_file: Option<Vec<String>>,
-    /// File to prepend to end of output upgrade script. May be repeated to add additional files.
+    /// File to prepend to beginning of output upgrade script. May be repeated to add additional files.
     #[arg(short,long)]
     prepend_file: Option<Vec<String>>,
     /// Output directory where to write the database upgrade script file.
