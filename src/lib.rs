@@ -165,7 +165,7 @@ pub fn write_file(mut outf: &File, inf: &String) -> Result<(), Box<dyn Error>> {
 pub fn write_upgrade(mut outf: &File, inf: &String) -> Result<(), Box<dyn Error>> {
     match read_to_string(inf) {
         Ok(lines) => {
-            let re = Regex::new("^(?:BEGIN|COMMIT);").unwrap();
+            let re = Regex::new(r"^\s*(?:BEGIN|COMMIT);").unwrap();
             for line in lines.split_terminator("\n").collect::<Vec<&str>>() {
                 if ! re.is_match(line) {
                     match writeln!(outf, "{}", line) {
