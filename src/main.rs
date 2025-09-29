@@ -207,38 +207,14 @@ fn main() {
 
     // Set up to handle upgrades that need to be moved.
     let movedre: Option<Regex> = match cli.moved {
-        Some(v) => {
-            let mut restr = String::from("(?:");
-            let mut add_pipe = false;
-            for upgrade in v {
-                if add_pipe {
-                    restr.push('|');
-                }
-                restr.push_str(&upgrade);
-                add_pipe = true;
-            }
-            restr.push(')');
-            Some(Regex::new(&restr).unwrap())
-        },
+        Some(v) => Some(make_or_regex(&v)),
         None => None,
     };
     let mut moved: Vec<String> = Vec::new();
 
     // Set up to handle upgrades that need to be skipped.
     let skippedre: Option<Regex> = match cli.skipped {
-        Some(v) => {
-            let mut restr = String::from("(?:");
-            let mut add_pipe = false;
-            for upgrade in v {
-                if add_pipe {
-                    restr.push('|');
-                }
-                restr.push_str(&upgrade);
-                add_pipe = true;
-            }
-            restr.push(')');
-            Some(Regex::new(&restr).unwrap())
-        },
+        Some(v) => Some(make_or_regex(&v)),
         None => None,
     };
 

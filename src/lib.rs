@@ -210,3 +210,21 @@ pub fn review_file(file: &String) -> Result<(), Box<dyn Error>> {
         Err(e) => Err(Box::new(e)),
     }
 }
+
+/// Generate a regular expression that matches any string in a vector
+///
+/// Takes a Vector of Strings and returns a Regex that ors the strings
+/// in a non-capture group.
+pub fn make_or_regex(strings: &Vec<String>) -> Regex {
+    let mut restr = String::from("(?:");
+    let mut add_pipe = false;
+    for entry in strings {
+        if add_pipe {
+            restr.push('|');
+        }
+        restr.push_str(&entry);
+        add_pipe = true;
+    }
+    restr.push(')');
+    Regex::new(&restr).unwrap()
+}
