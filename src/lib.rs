@@ -23,7 +23,7 @@ use std::env::var;
 use std::error::Error;
 use std::fmt;
 use std::fs::{File, read_to_string};
-use std::io::prelude::*;
+use std::io::{self, Write};
 use std::path::Path;
 use std::process::Command;
 
@@ -145,15 +145,9 @@ pub fn get_upgrades(repo: &Repository, from: &Branch, to: &Branch) -> Result<Vec
 /// handle (outf).
 ///
 /// Returns an error on failure or an empty result on success.
-pub fn write_file(mut outf: &File, inf: &String) -> Result<(), Box<dyn Error>> {
-    match read_to_string(inf) {
-        Ok(lines) => match outf.write_all(lines.as_bytes()) {
-            Ok(_) => (),
-            Err(e) => return Err(Box::new(e)),
-        },
-        Err(e) => return Err(Box::new(e)),
-    }
-    Ok(())
+pub fn write_file(mut outf: &File, inf: &String) -> io::Result<()> {
+    let content = read_to_string(inf)?;
+    outf.write_all(content.as_bytes())
 }
 
 /// Read an upgrade file and write its contents to the output file
@@ -162,20 +156,13 @@ pub fn write_file(mut outf: &File, inf: &String) -> Result<(), Box<dyn Error>> {
 /// "BEGIN;" and "COMMIT;" lines, to the output file handle (outf).
 ///
 /// Returns an error on failure or an empty Result on success.
-pub fn write_upgrade(mut outf: &File, inf: &String) -> Result<(), Box<dyn Error>> {
-    match read_to_string(inf) {
-        Ok(lines) => {
-            let re = Regex::new(r"^\s*(?:BEGIN|COMMIT);").unwrap();
-            for line in lines.split_terminator("\n").collect::<Vec<&str>>() {
-                if ! re.is_match(line) {
-                    match writeln!(outf, "{}", line) {
-                        Ok(_) => (),
-                        Err(e) => return Err(Box::new(e)),
-                    }
-                }
-            }
-        },
-        Err(e) => return Err(Box::new(e)),
+pub fn write_upgrade(mut outf: &File, inf: &String) -> io::Result<()> {
+    let lines = read_to_string(inf)?;
+    let re = Regex::new(r"^\s*(?:BEGIN|COMMIT);").unwrap();
+    for line in lines.split_terminator("\n").collect::<Vec<&str>>() {
+        if ! re.is_match(line) {
+            writeln!(outf, "{}", line)?;
+        }
     }
     Ok(())
 }
