@@ -204,6 +204,7 @@ fn main() {
         .expect("Unable to write to output");
     writeln!(&mut outfile, "\\set eg_version '''{version}'''").expect("Unable to write to output");
     writeln!(&mut outfile, "\nBEGIN;").expect("Unable to write to output");
+    writeln!(&mut outfile, "INSERT INTO config.upgrade_log(version, applied_to) VALUES('{version}', :eg_version);").expect("Unable to write to output");
 
     // Set up to handle upgrades that need to be moved.
     let movedre: Option<Regex> = match cli.moved {
