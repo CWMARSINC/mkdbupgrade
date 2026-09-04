@@ -113,8 +113,8 @@ fn get_branch_upgrades(repo: &Repository, branch: &Branch) -> Result<Vec<String>
                 let dir_tree = object.as_tree().unwrap();
                 dir_tree.walk(TreeWalkMode::PreOrder, |_, entry| {
                     match entry.name() {
-                        Some(n) => upgrades.push(format!("{}/{}", dirpath, n)),
-                        None => (),
+                        Ok(n) => upgrades.push(format!("{}/{}", dirpath, n)),
+                        Err(..) => (),
                     }
                     TreeWalkResult::Ok
                 })?;
